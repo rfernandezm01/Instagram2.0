@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Instagram2.0</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_home">Home</string>
+    <string name="menu_gallery">Gallery</string>
+    <string name="menu_slideshow">Slideshow</string>
+
+    <string name="APPWRITE_PROJECT_ID">67a619f10008b1c444e7</string>
+    <string name="APPWRITE_DATABASE_ID">"67af5305003bc322c0c6"</string>
+    <string name="APPWRITE_POSTS_COLLECTION_ID">67af535c0008ac9c7110</string>
+    <string name="APPWRITE_STORAGE_BUCKET_ID">67b5f7ce001ea49a053d</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
