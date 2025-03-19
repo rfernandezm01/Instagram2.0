@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -129,6 +130,8 @@ public class HomeFragment extends Fragment {
         public void onBindViewHolder(@NonNull PostViewHolder holder, int position)
         {
             Map<String,Object> post = lista.getDocuments().get(position).getData();
+
+
             if (post.get("authorPhotoUrl") == null) {
                 holder.authorPhotoImageView.setImageResource(R.drawable.user);
             } else {
@@ -200,11 +203,14 @@ public class HomeFragment extends Fragment {
             } else {
                 holder.mediaImageView.setVisibility(View.GONE);
             }
+
+            if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
+                holder.deletebutton.setVisibility(View.VISIBLE);
+            } else {
+                holder.deletebutton.setVisibility(View.GONE);
+            }
+
             holder.deletebutton.setOnClickListener(view -> {
-                if (!post.get("borrar").toString().equals(userId)) {
-                    Snackbar.make(view, "No puedes eliminar este post", Snackbar.LENGTH_LONG).show();
-                    return;
-                }
 
                 Databases databases = new Databases(client);
                 Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -216,6 +222,7 @@ public class HomeFragment extends Fragment {
                             post.get("$id").toString(),
                             new CoroutineCallback<>((result, error) -> {
                                 if (error != null) {
+                                    Log.e("PostDelete", "Error al eliminar el post", error);
                                     Snackbar.make(view, "Error al eliminar el post", Snackbar.LENGTH_LONG).show();
                                     return;
                                 }
@@ -226,9 +233,11 @@ public class HomeFragment extends Fragment {
                             })
                     );
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    Log.e("PostDelete", "Excepción al eliminar el post", e);
+                    Snackbar.make(view, "Ocurrió un error inesperado", Snackbar.LENGTH_LONG).show();
                 }
             });
+
 
         }
         @Override

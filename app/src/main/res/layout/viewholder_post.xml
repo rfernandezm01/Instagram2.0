@@ -72,5 +72,14 @@
 
             </LinearLayout>
         </LinearLayout>
+        <Button
+            android:id="@+id/deleteButton"
+            android:layout_width="100dp"
+            android:layout_height="20dp"
+            android:text="borrar"
+            android:background="@color/black"
+            android:textColor="@color/white"
+            android:visibility="gone"
+            android:layout_gravity="bottom"/>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
