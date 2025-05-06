@@ -1,5 +1,9 @@
 package com.example.instagram20;
 
+import static android.os.Build.ID;
+
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -107,7 +111,7 @@ public class HomeFragment extends Fragment {
     class PostViewHolder extends RecyclerView.ViewHolder {
         ImageView authorPhotoImageView, likeImageView, mediaImageView;
         TextView authorTextView, contentTextView, numLikesTextView, timeTextView;
-        Button deletebutton;
+        Button deletebutton, sharebutton, forwardbutton;
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
             authorPhotoImageView = itemView.findViewById(R.id.authorPhotoImageView);
@@ -118,10 +122,14 @@ public class HomeFragment extends Fragment {
             numLikesTextView = itemView.findViewById(R.id.numLikesTextView);
             timeTextView = itemView.findViewById(R.id.timeTextView);
             deletebutton = itemView.findViewById(R.id.deleteButton);
+            sharebutton = itemView.findViewById(R.id.shareButton);
+            forwardbutton = itemView.findViewById(R.id.forwardButton);
         }
     }
     class PostsAdapter extends RecyclerView.Adapter<PostViewHolder> {
         DocumentList<Map<String,Object>> lista = null;
+        private Activity context;
+
         @NonNull @Override
         public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             return new PostViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.viewholder_post, parent, false));
@@ -203,7 +211,8 @@ public class HomeFragment extends Fragment {
             } else {
                 holder.mediaImageView.setVisibility(View.GONE);
             }
-
+            
+            //deletebuttom
             if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
                 holder.deletebutton.setVisibility(View.VISIBLE);
             } else {
@@ -237,6 +246,65 @@ public class HomeFragment extends Fragment {
                     Snackbar.make(view, "Ocurrió un error inesperado", Snackbar.LENGTH_LONG).show();
                 }
             });
+            //sharebuttom
+
+            if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
+                holder.sharebutton.setVisibility(View.VISIBLE);
+            } else {
+                holder.sharebutton.setVisibility(View.GONE);
+            }
+            holder.sharebutton.setOnClickListener(view -> {
+                try {
+                    String postContent = post.get("contenido").toString(); // o el campo correcto del post
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, postContent);
+                    context.startActivity(Intent.createChooser(shareIntent, "Compartir post vía"));
+                } catch (Exception e) {
+                    Log.e("PostShare", "Excepción al compartir el post", e);
+                    Snackbar.make(view, "Ocurrió un error al compartir", Snackbar.LENGTH_LONG).show();
+                }
+            });
+            //forwardbuttom
+
+            if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
+                holder.forwardbutton.setVisibility(View.VISIBLE);
+            } else {
+                holder.forwardbutton.setVisibility(View.GONE);
+            }
+            holder.forwardbutton.setOnClickListener(view -> {
+                Handler mainHandler = new Handler(Looper.getMainLooper());
+                Databases databases = new Databases(client);
+
+                Map<String, Object> newPost = new HashMap<>();
+                newPost.put("contenido", post.get("contenido"));
+                newPost.put("autor", userId); // o el nombre/ID del usuario actual
+                newPost.put("fecha", System.currentTimeMillis());
+
+                try {
+                    databases.createDocument(
+                            getString(R.string.APPWRITE_DATABASE_ID),
+                            getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
+                            ID.trim(),
+                            newPost,
+                            new CoroutineCallback<>((result, error) -> {
+                                if (error != null) {
+                                    Log.e("PostForward", "Error al reenviar el post", error);
+                                    Snackbar.make(view, "Error al reenviar el post", Snackbar.LENGTH_LONG).show();
+                                    return;
+                                }
+                                mainHandler.post(() -> {
+                                    obtenerPosts(); // Refresca la lista
+                                    Snackbar.make(view, "Post reenviado", Snackbar.LENGTH_LONG).show();
+                                });
+                            })
+                    );
+                } catch (Exception e) {
+                    Log.e("PostForward", "Excepción al reenviar el post", e);
+                    Snackbar.make(view, "Ocurrió un error inesperado", Snackbar.LENGTH_LONG).show();
+                }
+            });
+
 
 
         }
