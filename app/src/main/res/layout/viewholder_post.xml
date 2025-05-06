@@ -81,5 +81,25 @@
             android:textColor="@color/white"
             android:visibility="gone"
             android:layout_gravity="bottom"/>
+        <Button
+            android:id="@+id/shareButton"
+            android:layout_width="100dp"
+            android:layout_height="20dp"
+            android:text="share"
+            android:background="@color/black"
+            android:textColor="@color/white"
+            android:visibility="gone"
+            android:layout_gravity="bottom"
+            android:contentDescription="Compartir post" />
+        <Button
+            android:id="@+id/forwardButton"
+            android:layout_width="100dp"
+            android:layout_height="20dp"
+            android:background="@color/black"
+            android:textColor="@color/white"
+            android:visibility="gone"
+            android:layout_gravity="bottom"
+            android:contentDescription="Compartir post"
+            android:text="Reenviar" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>
