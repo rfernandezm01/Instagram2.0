@@ -1,6 +1,7 @@
+// Paquete y imports...
 package com.example.instagram20;
 
-import static android.os.Build.ID;
+//import static android.os.Build.ID;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.appwrite.Client;
+import io.appwrite.ID;
 import io.appwrite.Query;
 import io.appwrite.coroutines.CoroutineCallback;
 import io.appwrite.exceptions.AppwriteException;
@@ -46,39 +48,37 @@ import io.appwrite.services.Databases;
 
 public class HomeFragment extends Fragment {
 
-    NavController navController; // <-----------------
+    NavController navController;
     AppViewModel appViewModel;
-
-    public HomeFragment() {
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_home, container, false);
-    }
-
     ImageView photoImageView;
     TextView displayNameTextView, emailTextView;
     Client client;
     Account account;
     String userId;
-
     PostsAdapter adapter;
+
+    public HomeFragment() {}
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_home, container, false);
+    }
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-            NavigationView navigationView = view.getRootView().findViewById(R.id.nav_view);
-            View header = navigationView.getHeaderView(0);
-            photoImageView = header.findViewById(R.id.imageView);
-            displayNameTextView = header.findViewById(R.id.displayNameTextView);
-            emailTextView = header.findViewById(R.id.emailTextView);
-        appViewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
+        NavigationView navigationView = view.getRootView().findViewById(R.id.nav_view);
+        View header = navigationView.getHeaderView(0);
+        photoImageView = header.findViewById(R.id.imageView);
+        displayNameTextView = header.findViewById(R.id.displayNameTextView);
+        emailTextView = header.findViewById(R.id.emailTextView);
 
-            navController = Navigation.findNavController(view);
+        appViewModel = new ViewModelProvider(requireActivity()).get(AppViewModel.class);
+        navController = Navigation.findNavController(view);
 
         client = new Client(requireContext()).setProject(getString(R.string.APPWRITE_PROJECT_ID));
         account = new Account(client);
         Handler mainHandler = new Handler(Looper.getMainLooper());
+
         try {
             account.get(new CoroutineCallback<>((result, error) -> {
                 if (error != null) {
@@ -87,31 +87,28 @@ public class HomeFragment extends Fragment {
                 }
                 mainHandler.post(() -> {
                     userId = result.getId();
-                    displayNameTextView.setText(result.getName().toString());
-                    emailTextView.setText(result.getEmail().toString());
+                    displayNameTextView.setText(result.getName());
+                    emailTextView.setText(result.getEmail());
                     Glide.with(requireView()).load(R.drawable.ic_launcher_background).into(photoImageView);
-                    obtenerPosts(); // < – Pedir los posts tras obtener el usuario
+                    obtenerPosts();
                 });
             }));
         } catch (AppwriteException e) {
             throw new RuntimeException(e);
-
         }
-        view.findViewById(R.id.gotoNewPostFragmentButton).setOnClickListener(new View.OnClickListener() {
 
-            @Override
-            public void onClick(View v) {
-                navController.navigate(R.id.newPostFragment);
-            }
-        });
+        view.findViewById(R.id.gotoNewPostFragmentButton).setOnClickListener(v -> navController.navigate(R.id.newPostFragment));
+
         RecyclerView postsRecyclerView = view.findViewById(R.id.postsRecyclerView);
-        adapter = new PostsAdapter();
+        adapter = new PostsAdapter(requireActivity());
         postsRecyclerView.setAdapter(adapter);
     }
+
     class PostViewHolder extends RecyclerView.ViewHolder {
         ImageView authorPhotoImageView, likeImageView, mediaImageView;
         TextView authorTextView, contentTextView, numLikesTextView, timeTextView;
         Button deletebutton, sharebutton, forwardbutton;
+
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
             authorPhotoImageView = itemView.findViewById(R.id.authorPhotoImageView);
@@ -126,68 +123,74 @@ public class HomeFragment extends Fragment {
             forwardbutton = itemView.findViewById(R.id.forwardButton);
         }
     }
-    class PostsAdapter extends RecyclerView.Adapter<PostViewHolder> {
-        DocumentList<Map<String,Object>> lista = null;
-        private Activity context;
 
-        @NonNull @Override
+    class PostsAdapter extends RecyclerView.Adapter<PostViewHolder> {
+        DocumentList<Map<String, Object>> lista = null;
+        private final Activity context;
+
+        PostsAdapter(Activity context) {
+            this.context = context;
+        }
+
+        @NonNull
+        @Override
         public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             return new PostViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.viewholder_post, parent, false));
         }
-        @Override
-        public void onBindViewHolder(@NonNull PostViewHolder holder, int position)
-        {
-            Map<String,Object> post = lista.getDocuments().get(position).getData();
 
+        @Override
+        public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
+            Map<String, Object> post = lista.getDocuments().get(position).getData();
 
             if (post.get("authorPhotoUrl") == null) {
                 holder.authorPhotoImageView.setImageResource(R.drawable.user);
             } else {
-                Glide.with(getContext()).load(post.get("authorPhotoUrl").toString()).circleCrop()
-                        .into(holder.authorPhotoImageView);
+                Glide.with(getContext()).load(post.get("authorPhotoUrl").toString()).circleCrop().into(holder.authorPhotoImageView);
             }
+
             holder.authorTextView.setText(post.get("author").toString());
             holder.contentTextView.setText(post.get("content").toString());
 
             SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             Calendar calendar = Calendar.getInstance();
-            if(post.get("time") != null)
-                calendar.setTimeInMillis((long)post.get("time"));
-            else
-                calendar.setTimeInMillis(0);
-
+            calendar.setTimeInMillis(post.get("time") != null ? (long) post.get("time") : 0);
             holder.timeTextView.setText(formatter.format(calendar.getTime()));
 
-            // Gestion de likes
+            // Likes
             List<String> likes = (List<String>) post.get("likes");
-            if(likes.contains(userId))
+            if (likes.contains(userId)) {
                 holder.likeImageView.setImageResource(R.drawable.like_on);
-            else
+            } else {
                 holder.likeImageView.setImageResource(R.drawable.like_off);
+            }
             holder.numLikesTextView.setText(String.valueOf(likes.size()));
+
             holder.likeImageView.setOnClickListener(view -> {
                 Databases databases = new Databases(client);
                 Handler mainHandler = new Handler(Looper.getMainLooper());
-                List<String> nuevosLikes = likes;
-                if(nuevosLikes.contains(userId))
+
+                List<String> nuevosLikes = new ArrayList<>(likes);
+                if (nuevosLikes.contains(userId)) {
                     nuevosLikes.remove(userId);
-                else
+                } else {
                     nuevosLikes.add(userId);
+                }
+
                 Map<String, Object> data = new HashMap<>();
                 data.put("likes", nuevosLikes);
+
                 try {
                     databases.updateDocument(
                             getString(R.string.APPWRITE_DATABASE_ID),
                             getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
-                            post.get("$id").toString(), // documentId
-                            data, // data (optional)
-                            new ArrayList<>(), // permissions (optional)
+                            post.get("$id").toString(),
+                            data,
+                            new ArrayList<>(),
                             new CoroutineCallback<>((result, error) -> {
                                 if (error != null) {
                                     error.printStackTrace();
                                     return;
                                 }
-                                System.out.println("Likes actualizados:" + result.toString());
                                 mainHandler.post(() -> obtenerPosts());
                             })
                     );
@@ -195,14 +198,14 @@ public class HomeFragment extends Fragment {
                     throw new RuntimeException(e);
                 }
             });
-            // Miniatura de media
+
+            // Media
             if (post.get("mediaUrl") != null) {
                 holder.mediaImageView.setVisibility(View.VISIBLE);
                 if ("audio".equals(post.get("mediaType").toString())) {
                     Glide.with(requireView()).load(R.drawable.audio).centerCrop().into(holder.mediaImageView);
                 } else {
-                    Glide.with(requireView()).load(post.get("mediaUrl").toString()).centerCrop().into
-                            (holder.mediaImageView);
+                    Glide.with(requireView()).load(post.get("mediaUrl").toString()).centerCrop().into(holder.mediaImageView);
                 }
                 holder.mediaImageView.setOnClickListener(view -> {
                     appViewModel.postSeleccionado.setValue(post);
@@ -211,16 +214,11 @@ public class HomeFragment extends Fragment {
             } else {
                 holder.mediaImageView.setVisibility(View.GONE);
             }
-            
-            //deletebuttom
-            if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
-                holder.deletebutton.setVisibility(View.VISIBLE);
-            } else {
-                holder.deletebutton.setVisibility(View.GONE);
-            }
+
+            // Botones
+            holder.deletebutton.setVisibility(post.get("uid") != null && post.get("uid").toString().equals(userId) ? View.VISIBLE : View.GONE);
 
             holder.deletebutton.setOnClickListener(view -> {
-
                 Databases databases = new Databases(client);
                 Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -231,109 +229,95 @@ public class HomeFragment extends Fragment {
                             post.get("$id").toString(),
                             new CoroutineCallback<>((result, error) -> {
                                 if (error != null) {
-                                    Log.e("PostDelete", "Error al eliminar el post", error);
                                     Snackbar.make(view, "Error al eliminar el post", Snackbar.LENGTH_LONG).show();
                                     return;
                                 }
                                 mainHandler.post(() -> {
-                                    obtenerPosts(); // Refresca la lista de posts después de eliminar
+                                    obtenerPosts();
                                     Snackbar.make(view, "Post eliminado", Snackbar.LENGTH_LONG).show();
                                 });
                             })
                     );
                 } catch (Exception e) {
-                    Log.e("PostDelete", "Excepción al eliminar el post", e);
-                    Snackbar.make(view, "Ocurrió un error inesperado", Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(view, "Error inesperado al eliminar", Snackbar.LENGTH_LONG).show();
                 }
             });
-            //sharebuttom
 
-            if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
-                holder.sharebutton.setVisibility(View.VISIBLE);
-            } else {
-                holder.sharebutton.setVisibility(View.GONE);
-            }
+            holder.sharebutton.setVisibility(View.VISIBLE);
             holder.sharebutton.setOnClickListener(view -> {
                 try {
-                    String postContent = post.get("contenido").toString(); // o el campo correcto del post
+                    String postContent = post.get("content").toString();
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
                     shareIntent.setType("text/plain");
                     shareIntent.putExtra(Intent.EXTRA_TEXT, postContent);
                     context.startActivity(Intent.createChooser(shareIntent, "Compartir post vía"));
                 } catch (Exception e) {
-                    Log.e("PostShare", "Excepción al compartir el post", e);
-                    Snackbar.make(view, "Ocurrió un error al compartir", Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(view, "Error al compartir", Snackbar.LENGTH_LONG).show();
                 }
             });
-            //forwardbuttom
 
-            if (post.get("uid") != null && post.get("uid").toString().equals(userId)) {
-                holder.forwardbutton.setVisibility(View.VISIBLE);
-            } else {
-                holder.forwardbutton.setVisibility(View.GONE);
-            }
+            holder.forwardbutton.setVisibility(View.VISIBLE);
             holder.forwardbutton.setOnClickListener(view -> {
                 Handler mainHandler = new Handler(Looper.getMainLooper());
                 Databases databases = new Databases(client);
 
                 Map<String, Object> newPost = new HashMap<>();
-                newPost.put("contenido", post.get("contenido"));
-                newPost.put("autor", userId); // o el nombre/ID del usuario actual
-                newPost.put("fecha", System.currentTimeMillis());
+                newPost.put("content", post.get("content"));
+                newPost.put("author", post.get("author"));
+                newPost.put("time", System.currentTimeMillis());
+                newPost.put("likes", new ArrayList<String>());
 
                 try {
                     databases.createDocument(
                             getString(R.string.APPWRITE_DATABASE_ID),
                             getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
-                            ID.trim(),
+                            ID.unique(),
                             newPost,
                             new CoroutineCallback<>((result, error) -> {
                                 if (error != null) {
-                                    Log.e("PostForward", "Error al reenviar el post", error);
                                     Snackbar.make(view, "Error al reenviar el post", Snackbar.LENGTH_LONG).show();
                                     return;
                                 }
                                 mainHandler.post(() -> {
-                                    obtenerPosts(); // Refresca la lista
+                                    obtenerPosts();
                                     Snackbar.make(view, "Post reenviado", Snackbar.LENGTH_LONG).show();
                                 });
                             })
                     );
                 } catch (Exception e) {
-                    Log.e("PostForward", "Excepción al reenviar el post", e);
-                    Snackbar.make(view, "Ocurrió un error inesperado", Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(view, "Error inesperado al reenviar", Snackbar.LENGTH_LONG).show();
                 }
             });
-
-
-
         }
+
         @Override
         public int getItemCount() {
             return lista == null ? 0 : lista.getDocuments().size();
         }
-        public void establecerLista(DocumentList<Map<String,Object>> lista) {
+
+        public void establecerLista(DocumentList<Map<String, Object>> lista) {
             this.lista = lista;
             notifyDataSetChanged();
         }
     }
-    void obtenerPosts()
-    {
+
+    void obtenerPosts() {
         Databases databases = new Databases(client);
         Handler mainHandler = new Handler(Looper.getMainLooper());
+
         try {
             databases.listDocuments(
-                    getString(R.string.APPWRITE_DATABASE_ID), // databaseId
-                    getString(R.string.APPWRITE_POSTS_COLLECTION_ID), // collectionId
-                    Arrays.asList(Query.Companion.orderDesc("time"),
-                    Query.Companion.limit(58)),
+                    getString(R.string.APPWRITE_DATABASE_ID),
+                    getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
+                    Arrays.asList(
+                            Query.Companion.orderDesc("time"),
+                            Query.Companion.limit(58)
+                    ),
                     new CoroutineCallback<>((result, error) -> {
                         if (error != null) {
-                            Snackbar.make(requireView(), "Error al obtener los posts: "
-                                    + error.toString(), Snackbar.LENGTH_LONG).show();
+                            Snackbar.make(requireView(), "Error al obtener los posts", Snackbar.LENGTH_LONG).show();
                             return;
                         }
-                        System.out.println( result.toString() );
                         mainHandler.post(() -> adapter.establecerLista(result));
                     })
             );
