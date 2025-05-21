@@ -271,7 +271,7 @@ public class HomeFragment extends Fragment {
                     databases.createDocument(
                             getString(R.string.APPWRITE_DATABASE_ID),
                             getString(R.string.APPWRITE_POSTS_COLLECTION_ID),
-                            ID.unique(),
+                            "unique()",
                             newPost,
                             new CoroutineCallback<>((result, error) -> {
                                 if (error != null) {
@@ -326,3 +326,4 @@ public class HomeFragment extends Fragment {
         }
     }
 }
+
